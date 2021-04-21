@@ -26,6 +26,7 @@ FactoryBot.define do
     address4 { nil }
     postcode { nil }
     latitude { nil }
+    urn { nil }
     longitude { nil }
     recruitment_cycle_year { "2019" }
     last_published_at { Time.zone.local(2019).utc.iso8601 }
@@ -62,6 +63,10 @@ FactoryBot.define do
 
     trait :accredited_body do
       accredited_body? { true }
+    end
+
+    trait :lead_school do
+      urn { Faker::Number.number(digits: 5) }
     end
 
     factory :providers_response, class: Hash do
