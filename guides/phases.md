@@ -35,6 +35,12 @@ the next cycle's three follow. `apply_open` and `apply_reopened` are the same ph
 seen from either side of the rollover, which is why the switcher can show Apply open
 for the cycle you are standing in as well as for the one coming.
 
+`real` is the sixth radio, and it is the only setting that reads the clock. Anything
+else held in Redis that is not one of the five options, such as a name an earlier
+deploy used, reads as `real` too, because a value that matched no phase would leave
+every predicate false and the service with no apply button and no banner to explain
+it.
+
 The apply deadline banner is deliberately not a row. It is a window inside
 `apply_open`, and the switcher toggles it on its own axis. The other two banners need
 no such control, because each covers exactly one phase: picking the phase produces the
