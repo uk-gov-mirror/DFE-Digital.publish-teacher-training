@@ -80,9 +80,23 @@ module Find
     # page changes is not a phase, which is why the deadline banner is a window
     # inside `apply_open` rather than a row here.
     #
-    # The four rows tile one cycle year end to end, in the order a cycle runs.
-    # Nothing overlaps, so exactly one row is live at any instant.
+    # The four rows tile the cycle end to end. Nothing overlaps, so exactly one
+    # row is live at any instant.
+    #
+    # They run in the order a person walks through them, starting from Apply
+    # closing: Apply shuts, Find shuts, Find reopens, Apply reopens. That walk
+    # crosses the cycle boundary once, between the first row and the second,
+    # which is exactly what `advances_cycle` marks. The switcher renders its
+    # options in this order and puts a divider where the cycle year changes.
     PHASES = {
+      # Closed, not merely shut to submissions: a candidate cannot create an
+      # application either. That is what separates it from `apply_not_open_yet`,
+      # where an application can be built but not sent. Find stays up throughout.
+      apply_closed: {
+        from: ->(year) { apply_deadline(year) },
+        to: ->(year) { find_closes(year) },
+        advances_cycle: false,
+      },
       # The only row that spans two cycle entries, because Find closing and Find
       # reopening are the seam between them. Indexed by the cycle it leads into,
       # which is where `cycle_year_for_time` puts all but a sliver of it.
@@ -100,14 +114,6 @@ module Find
         from: ->(year) { apply_opens(year) },
         to: ->(year) { apply_deadline(year) },
         advances_cycle: true,
-      },
-      # Closed, not merely shut to submissions: a candidate cannot create an
-      # application either. That is what separates it from `apply_not_open_yet`,
-      # where an application can be built but not sent. Find stays up throughout.
-      apply_closed: {
-        from: ->(year) { apply_deadline(year) },
-        to: ->(year) { find_closes(year) },
-        advances_cycle: false,
       },
     }.freeze
 

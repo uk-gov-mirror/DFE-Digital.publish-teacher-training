@@ -416,7 +416,9 @@ module Find
       end
 
       it "tiles the cycle end to end, with no gap and no overlap" do
-        ranges = described_class::PHASES.keys.map { |phase| described_class.phase_range(phase, 2026) }
+        ranges = described_class::PHASES.keys
+          .map { |phase| described_class.phase_range(phase, 2026) }
+          .sort_by(&:first)
 
         expect(ranges.each_cons(2).map { |(_, a_to), (b_from, _)| a_to == b_from }).to all(be true)
       end

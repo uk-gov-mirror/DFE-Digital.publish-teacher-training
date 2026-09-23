@@ -7,10 +7,16 @@ Find describes where it is in the recruitment cycle with four phases, declared i
 takes a submission or it does not. A span where only the wording on the page changes
 is not a phase. That test is what keeps the table to four rows.
 
-They tile one cycle year end to end, with no gap and no overlap: `find_closed`,
-`apply_not_open_yet`, `apply_open`, `apply_closed`, and then the next cycle's
-`find_closed`. At any instant exactly one row is live. Nothing nests inside anything
-else, so the cycle switcher can force a phase and turn on that phase alone.
+They tile the cycle end to end, with no gap and no overlap. At any instant exactly one
+row is live. Nothing nests inside anything else, so the cycle switcher can force a
+phase and turn on that phase alone.
+
+`PHASES` lists them in the order a person walks through them, starting from Apply
+closing: `apply_closed`, `find_closed`, `apply_not_open_yet`, `apply_open`. That walk
+crosses the cycle boundary once, between the first row and the second, which is what
+`advances_cycle` marks. The switcher renders in this order and puts its divider where
+the cycle year changes, so the current cycle's option comes first and the next cycle's
+three follow.
 
 The apply deadline banner is deliberately not a row. It is a window inside
 `apply_open`, and the switcher toggles it on its own axis.

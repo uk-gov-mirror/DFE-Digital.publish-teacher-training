@@ -34,7 +34,7 @@ RSpec.describe "switcher cycle" do
   scenario "Divides the switcher options where the recruitment cycle changes" do
     visit find_cycles_path
 
-    expect(page).to have_css(".govuk-radios__divider", text: "2023 cycle", exact_text: true)
+    expect(page).to have_css(".govuk-radios__divider", text: "2024 cycle", exact_text: true)
   end
 
   scenario "Apply is open and the deadline banner is switched on" do
