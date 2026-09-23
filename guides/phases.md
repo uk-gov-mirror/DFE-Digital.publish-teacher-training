@@ -246,6 +246,10 @@ gantt
 | `apply_open` | `apply_opens` | `apply_deadline` | none |
 | `apply_closed` | `apply_deadline` | `find_closes` | none |
 
+Consecutive rows share a boundary, so `phases_in_time` reads each row as half-open:
+the shared instant belongs to the row that opens on it. At `apply_deadline` the live
+phase is `apply_closed`, not `apply_open`.
+
 The deadline banner is not in this table. It runs `first_deadline_banner` to
 `apply_deadline`, inside `apply_open`, and `show_apply_deadline_banner?` reads it.
 
