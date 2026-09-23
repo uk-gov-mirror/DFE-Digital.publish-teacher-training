@@ -79,7 +79,7 @@ module Find
     # year changes between neighbours, so reordering this table reorders the
     # page.
     PHASES = {
-      today_is_mid_cycle: {
+      apply_closing_soon: {
         from: ->(year) { first_deadline_banner(year) },
         to: ->(year) { apply_deadline(year) },
         advances_cycle: false,
@@ -230,7 +230,7 @@ module Find
         phase_in_time?(:today_is_after_apply_opens)
     end
 
-    def self.show_apply_deadline_banner? = phase_in_time?(:today_is_mid_cycle)
+    def self.show_apply_deadline_banner? = phase_in_time?(:apply_closing_soon)
 
     def self.apply_deadline_passed = phase_in_time?(:today_is_after_apply_deadline_passed)
 

@@ -4,7 +4,7 @@ en:
     cycles:
       real:
         name: Same as production environment
-      today_is_mid_cycle:
+      apply_closing_soon:
         name: Mid cycle and deadlines should be displayed
         description: Candidates can see upcoming application deadlines
       today_is_after_apply_deadline_passed:

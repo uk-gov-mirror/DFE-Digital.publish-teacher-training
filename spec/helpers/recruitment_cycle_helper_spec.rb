@@ -25,7 +25,7 @@ RSpec.describe RecruitmentCycleHelper do
     it "uses the phase's own boundaries" do
       allow(Find::CycleTimetable).to receive(:cycle_year_for_time).and_return(2026)
 
-      hint = helper.hint_for_phase(:today_is_mid_cycle)
+      hint = helper.hint_for_phase(:apply_closing_soon)
 
       expect(hint).to eq(
         "<strong>2026 cycle.</strong> Candidates can see upcoming application deadlines " \

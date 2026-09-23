@@ -198,9 +198,9 @@ module Find
         end
       end
 
-      context "when current_cycle_schedule returns `:today_is_mid_cycle`" do
+      context "when current_cycle_schedule returns `:apply_closing_soon`" do
         it "returns true so that candidates can apply to courses in the current cycle" do
-          allow(described_class).to receive(:current_cycle_schedule).and_return(:today_is_mid_cycle)
+          allow(described_class).to receive(:current_cycle_schedule).and_return(:apply_closing_soon)
           expect(described_class.mid_cycle?).to be true
         end
       end
@@ -221,9 +221,9 @@ module Find
     end
 
     describe ".show_apply_deadline_banner?" do
-      context "when current_cycle_schedule returns `:today_is_mid_cycle`" do
+      context "when current_cycle_schedule returns `:apply_closing_soon`" do
         it "still returns true" do
-          allow(described_class).to receive(:current_cycle_schedule).and_return(:today_is_mid_cycle)
+          allow(described_class).to receive(:current_cycle_schedule).and_return(:apply_closing_soon)
           expect(described_class.show_apply_deadline_banner?).to be true
         end
       end
@@ -369,8 +369,8 @@ module Find
         expect(described_class::PHASES.keys).to match_array(described_class.phases_in_time.keys)
       end
 
-      it "gives today_is_mid_cycle the first deadline banner as its start" do
-        from, to = described_class.phase_range(:today_is_mid_cycle, 2026)
+      it "gives apply_closing_soon the first deadline banner as its start" do
+        from, to = described_class.phase_range(:apply_closing_soon, 2026)
 
         expect(from).to eq(described_class.date(:first_deadline_banner, 2026))
         expect(to).to eq(described_class.date(:apply_deadline, 2026))
@@ -390,13 +390,13 @@ module Find
       end
 
       it "keeps the year for a phase that does not advance the cycle" do
-        expect(described_class.year_for_phase(:today_is_mid_cycle, 2026)).to eq(2026)
+        expect(described_class.year_for_phase(:apply_closing_soon, 2026)).to eq(2026)
       end
 
       it "defaults to the real cycle year for the current time when no year is given" do
         allow(described_class).to receive(:cycle_year_for_time).and_return(2026)
 
-        expect(described_class.year_for_phase(:today_is_mid_cycle)).to eq(2026)
+        expect(described_class.year_for_phase(:apply_closing_soon)).to eq(2026)
       end
 
       it "does not move when a different phase is selected in the switcher" do
@@ -419,7 +419,7 @@ module Find
             find_closed: %i[find_closed],
             today_is_after_apply_opens: %i[today_is_after_apply_opens],
             today_is_between_find_opening_and_apply_opening: %i[today_is_between_find_opening_and_apply_opening],
-            today_is_mid_cycle: %i[today_is_after_apply_opens today_is_mid_cycle].sort,
+            apply_closing_soon: %i[today_is_after_apply_opens apply_closing_soon].sort,
             today_is_after_apply_deadline_passed: %i[today_is_after_apply_deadline_passed],
           },
         )
