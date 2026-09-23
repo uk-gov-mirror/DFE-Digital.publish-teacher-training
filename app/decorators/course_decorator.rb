@@ -44,7 +44,7 @@ class CourseDecorator < ApplicationDecorator
   end
 
   def saved_status_text_and_colour
-    if Find::CycleTimetable.phase_in_time?(:today_is_after_apply_deadline_passed)
+    if Find::CycleTimetable.phase_in_time?(:apply_closed)
       ["Not accepting applications", "red"]
     elsif Find::CycleTimetable.phase_in_time?(:apply_not_open_yet)
       ["Not yet open", "grey"]

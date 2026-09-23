@@ -27,7 +27,7 @@ module Find
 
       context "We are in the middle of the 2021 cycle and the cycle switcher has been set to 'find has reopened'" do
         it "is 2022" do
-          allow(SiteSetting).to receive(:cycle_schedule).and_return(:today_is_after_apply_opens)
+          allow(SiteSetting).to receive(:cycle_schedule).and_return(:apply_open)
 
           Timecop.travel(Time.zone.local(2020, 10, 6, 10, 0, 0)) do
             expect(described_class.current_year).to eq(2022)
@@ -191,9 +191,9 @@ module Find
         end
       end
 
-      context "when current_cycle_schedule returns `:today_is_after_apply_opens`" do
+      context "when current_cycle_schedule returns `:apply_open`" do
         it "returns true" do
-          allow(described_class).to receive(:current_cycle_schedule).and_return(:today_is_after_apply_opens)
+          allow(described_class).to receive(:current_cycle_schedule).and_return(:apply_open)
           expect(described_class.mid_cycle?).to be true
         end
       end
@@ -212,9 +212,9 @@ module Find
         end
       end
 
-      context "when current_cycle_schedule returns `:today_is_after_apply_deadline_passed`" do
+      context "when current_cycle_schedule returns `:apply_closed`" do
         it "returns false" do
-          allow(described_class).to receive(:current_cycle_schedule).and_return(:today_is_after_apply_deadline_passed)
+          allow(described_class).to receive(:current_cycle_schedule).and_return(:apply_closed)
           expect(described_class.mid_cycle?).to be false
         end
       end
@@ -417,10 +417,10 @@ module Find
         expect(result).to eq(
           {
             find_closed: %i[find_closed],
-            today_is_after_apply_opens: %i[today_is_after_apply_opens],
+            apply_open: %i[apply_open],
             apply_not_open_yet: %i[apply_not_open_yet],
-            apply_closing_soon: %i[today_is_after_apply_opens apply_closing_soon].sort,
-            today_is_after_apply_deadline_passed: %i[today_is_after_apply_deadline_passed],
+            apply_closing_soon: %i[apply_open apply_closing_soon].sort,
+            apply_closed: %i[apply_closed],
           },
         )
       end

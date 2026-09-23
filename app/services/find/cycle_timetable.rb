@@ -84,7 +84,10 @@ module Find
         to: ->(year) { apply_deadline(year) },
         advances_cycle: false,
       },
-      today_is_after_apply_deadline_passed: {
+      # Closed, not merely shut to submissions: a candidate cannot create an
+      # application either. That is what separates it from `apply_not_open_yet`,
+      # where an application can be built but not sent. Find stays up throughout.
+      apply_closed: {
         from: ->(year) { apply_deadline(year) },
         to: ->(year) { find_closes(year) },
         advances_cycle: false,
@@ -102,7 +105,7 @@ module Find
         to: ->(year) { apply_opens(year) },
         advances_cycle: true,
       },
-      today_is_after_apply_opens: {
+      apply_open: {
         from: ->(year) { apply_opens(year) },
         to: ->(year) { apply_deadline(year) },
         advances_cycle: true,
@@ -223,18 +226,18 @@ module Find
     # This spans two phases rather than reading one. Apply accepts a part built
     # application from the moment Find opens, a week before it accepts
     # submissions, so the apply button belongs on the page for both. The two
-    # phases differ only in what the page says about the wait, never in what a
-    # candidate can do.
+    # phases differ in whether Apply takes the finished application, but inside
+    # Find only in what the page says about the wait.
     def self.mid_cycle?
       phase_in_time?(:apply_not_open_yet) ||
-        phase_in_time?(:today_is_after_apply_opens)
+        phase_in_time?(:apply_open)
     end
 
     def self.show_apply_deadline_banner? = phase_in_time?(:apply_closing_soon)
 
-    def self.apply_deadline_passed = phase_in_time?(:today_is_after_apply_deadline_passed)
+    def self.apply_deadline_passed = phase_in_time?(:apply_closed)
 
-    def self.show_cycle_closed_banner? = phase_in_time?(:today_is_after_apply_deadline_passed)
+    def self.show_cycle_closed_banner? = phase_in_time?(:apply_closed)
 
     def self.show_apply_opens_soon_banner?
       phase_in_time?(:apply_not_open_yet)
