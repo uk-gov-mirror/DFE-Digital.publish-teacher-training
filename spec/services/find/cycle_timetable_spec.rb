@@ -375,25 +375,18 @@ module Find
         expect(from).to eq(described_class.date(:first_deadline_banner, 2026))
         expect(to).to eq(described_class.date(:apply_deadline, 2026))
       end
-    end
 
-    describe ".display_range" do
-      it "overrides the containment range for now_is_before_find_opens with the real closed window" do
-        from, to = described_class.display_range(:now_is_before_find_opens, 2027)
+      it "runs find_closed from Find closing in the previous cycle to Find reopening" do
+        from, to = described_class.phase_range(:find_closed, 2027)
 
         expect(from).to eq(described_class.date(:find_closes, 2026))
         expect(to).to eq(described_class.date(:find_opens, 2027))
-      end
-
-      it "falls back to phase_range for a phase with no display override" do
-        expect(described_class.display_range(:today_is_mid_cycle, 2026))
-          .to eq(described_class.phase_range(:today_is_mid_cycle, 2026))
       end
     end
 
     describe ".year_for_phase" do
       it "advances the year for a phase that advances the cycle" do
-        expect(described_class.year_for_phase(:now_is_before_find_opens, 2026)).to eq(2027)
+        expect(described_class.year_for_phase(:find_closed, 2026)).to eq(2027)
       end
 
       it "keeps the year for a phase that does not advance the cycle" do
@@ -423,7 +416,7 @@ module Find
 
         expect(result).to eq(
           {
-            now_is_before_find_opens: %i[now_is_before_find_opens],
+            find_closed: %i[find_closed],
             today_is_after_apply_opens: %i[today_is_after_apply_opens],
             today_is_between_find_opening_and_apply_opening: %i[today_is_between_find_opening_and_apply_opening],
             today_is_mid_cycle: %i[today_is_after_apply_opens today_is_mid_cycle].sort,

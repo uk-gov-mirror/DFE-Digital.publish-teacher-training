@@ -89,14 +89,12 @@ module Find
         to: ->(year) { find_closes(year) },
         advances_cycle: false,
       },
-      now_is_before_find_opens: {
-        from: ->(year) { find_opens(year).beginning_of_day },
+      # The only row that spans two cycle entries, because Find closing and Find
+      # reopening are the seam between them. Indexed by the cycle it leads into,
+      # which is where `cycle_year_for_time` puts all but a sliver of it.
+      find_closed: {
+        from: ->(year) { previous_find_closes(year) },
         to: ->(year) { find_opens(year) },
-        # The phase itself is the sliver between midnight and Find opening, but the
-        # period a person means by "Find has closed" runs from Find closing in the
-        # previous cycle to Find reopening in this one. Hints show that instead.
-        display_from: ->(year) { find_closes(year - 1) },
-        display_to: ->(year) { find_opens(year) },
         advances_cycle: true,
       },
       today_is_between_find_opening_and_apply_opening: {
@@ -167,6 +165,14 @@ module Find
       date(:find_closes, year)
     end
 
+    # When Find last shut before this cycle. The earliest cycle in the table has
+    # nothing before it, so its closure starts where the table's knowledge starts.
+    def self.previous_find_closes(year)
+      return find_opens(year).beginning_of_day unless CYCLE_DATES.key?(year - 1)
+
+      find_closes(year - 1)
+    end
+
     def self.first_deadline_banner(year = current_year) = date(:first_deadline_banner, year)
 
     def self.apply_deadline(year = current_year)
@@ -209,8 +215,8 @@ module Find
       Time.zone.now.between?(apply_deadline, find_closes)
     end
 
-    def self.find_open? = !phase_in_time?(:now_is_before_find_opens)
-    def self.find_down? = phase_in_time?(:now_is_before_find_opens)
+    def self.find_open? = !phase_in_time?(:find_closed)
+    def self.find_down? = phase_in_time?(:find_closed)
 
     # Whether a candidate can start an application for the cycle on display.
     #
@@ -237,14 +243,6 @@ module Find
     def self.phase_range(phase, year)
       definition = PHASES.fetch(phase)
       [definition[:from].call(year), definition[:to].call(year)]
-    end
-
-    def self.display_range(phase, year)
-      definition = PHASES.fetch(phase)
-
-      return phase_range(phase, year) unless definition[:display_from] && definition[:display_to]
-
-      [definition[:display_from].call(year), definition[:display_to].call(year)]
     end
 
     # The hints describe a fixed set of choices, so they read the real cycle year

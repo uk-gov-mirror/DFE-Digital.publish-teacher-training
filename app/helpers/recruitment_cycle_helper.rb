@@ -18,7 +18,7 @@ module RecruitmentCycleHelper
   end
 
   def hint_for_phase(phase, year = Find::CycleTimetable.year_for_phase(phase))
-    from, to = Find::CycleTimetable.display_range(phase, year)
+    from, to = Find::CycleTimetable.phase_range(phase, year)
     description = I18n.t("find.cycles.#{phase}.description")
 
     safe_join(

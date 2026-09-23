@@ -33,10 +33,10 @@ RSpec.describe RecruitmentCycleHelper do
       )
     end
 
-    it "names the next cycle year and shows the real closed window for now_is_before_find_opens" do
+    it "names the next cycle year and the closed window for find_closed" do
       allow(Find::CycleTimetable).to receive(:cycle_year_for_time).and_return(2026)
 
-      hint = helper.hint_for_phase(:now_is_before_find_opens)
+      hint = helper.hint_for_phase(:find_closed)
 
       expect(hint).to eq(
         "<strong>2027 cycle.</strong> Candidates can no longer browse courses on Find " \

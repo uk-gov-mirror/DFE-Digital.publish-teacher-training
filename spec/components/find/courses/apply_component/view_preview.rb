@@ -27,7 +27,7 @@ module Find
           course = Course.new(course_code: "FIND",
                               provider: Provider.new(provider_code: "DFE"))
 
-          # SiteSetting.set(name: "cycle_schedule", value: :now_is_before_find_opens)
+          # SiteSetting.set(name: "cycle_schedule", value: :find_closed)
           # Instead of doing the above, when the cycle switcher page is ported across we can make this work
           render Find::Courses::ApplyComponent::View.new(course)
         end
