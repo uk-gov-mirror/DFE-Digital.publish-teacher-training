@@ -104,8 +104,8 @@ module Find
         to: ->(year) { apply_opens(year) },
         advances_cycle: true,
       },
-      today_is_after_find_opens: {
-        from: ->(year) { find_opens(year) },
+      today_is_after_apply_opens: {
+        from: ->(year) { apply_opens(year) },
         to: ->(year) { apply_deadline(year) },
         advances_cycle: true,
       },
@@ -115,7 +115,7 @@ module Find
       now = Time.zone.now
       current_year = cycle_year_for_time(now)
 
-      # If the cycle switcher has been set to 'find has reopened' then
+      # If the cycle switcher has been set to 'apply has reopened' then
       # we want to request next year's courses from the TTAPI
       if PHASES.dig(current_cycle_schedule, :advances_cycle)
         current_year + 1
@@ -212,16 +212,23 @@ module Find
     def self.find_open? = !phase_in_time?(:now_is_before_find_opens)
     def self.find_down? = phase_in_time?(:now_is_before_find_opens)
 
-    def self.mid_cycle? = phase_in_time?(:today_is_after_find_opens)
+    # Whether a candidate can start an application for the cycle on display.
+    #
+    # This spans two phases rather than reading one. Apply accepts a part built
+    # application from the moment Find opens, a week before it accepts
+    # submissions, so the apply button belongs on the page for both. The two
+    # phases differ only in what the page says about the wait, never in what a
+    # candidate can do.
+    def self.mid_cycle?
+      phase_in_time?(:today_is_between_find_opening_and_apply_opening) ||
+        phase_in_time?(:today_is_after_apply_opens)
+    end
 
     def self.show_apply_deadline_banner? = phase_in_time?(:today_is_mid_cycle)
 
     def self.apply_deadline_passed = phase_in_time?(:today_is_after_apply_deadline_passed)
 
-    def self.show_cycle_closed_banner?
-      phase_in_time?(:today_is_after_apply_deadline_passed) &&
-        !phase_in_time?(:today_is_between_find_opening_and_apply_opening)
-    end
+    def self.show_cycle_closed_banner? = phase_in_time?(:today_is_after_apply_deadline_passed)
 
     def self.show_apply_opens_soon_banner?
       phase_in_time?(:today_is_between_find_opening_and_apply_opening)
@@ -259,9 +266,10 @@ module Find
       end
     end
 
-    # A phase turns on every phase whose range contains its own. In real time
-    # the ranges overlap, so mid cycle also means Find has opened. The switcher
-    # picks one phase, so it has to work the containment out for itself.
+    # A phase turns on every phase whose range contains its own. The switcher
+    # picks one phase, so it has to work the containment out for itself. Only
+    # one nesting is left: the deadline banner window sits inside the apply
+    # window, because it is a banner rather than a separate state.
     def self.implied_phases(phase)
       # Catches :real, and any stale value left in Redis from before the
       # allowlist of phases existed.

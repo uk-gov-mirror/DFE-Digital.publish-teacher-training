@@ -70,9 +70,9 @@ RSpec.describe "switcher cycle" do
     then_i_should_see_the_applications_closed_text
   end
 
-  scenario "Find has reopened" do
+  scenario "Apply has reopened" do
     when_i_visit_switcher_cycle_page
-    and_i_choose("Find has reopened")
+    and_i_choose("Apply has reopened")
     then_i_click_on_update_button
     and_i_should_see_the_success_banner
     and_i_should_see_the_correct_previous_recruitment_cycle_year

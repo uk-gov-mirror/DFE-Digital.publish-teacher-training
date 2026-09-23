@@ -27,7 +27,7 @@ module Find
 
       context "We are in the middle of the 2021 cycle and the cycle switcher has been set to 'find has reopened'" do
         it "is 2022" do
-          allow(SiteSetting).to receive(:cycle_schedule).and_return(:today_is_after_find_opens)
+          allow(SiteSetting).to receive(:cycle_schedule).and_return(:today_is_after_apply_opens)
 
           Timecop.travel(Time.zone.local(2020, 10, 6, 10, 0, 0)) do
             expect(described_class.current_year).to eq(2022)
@@ -191,9 +191,9 @@ module Find
         end
       end
 
-      context "when current_cycle_schedule returns `:today_is_after_find_opens`" do
+      context "when current_cycle_schedule returns `:today_is_after_apply_opens`" do
         it "returns true" do
-          allow(described_class).to receive(:current_cycle_schedule).and_return(:today_is_after_find_opens)
+          allow(described_class).to receive(:current_cycle_schedule).and_return(:today_is_after_apply_opens)
           expect(described_class.mid_cycle?).to be true
         end
       end
@@ -206,7 +206,7 @@ module Find
       end
 
       context "when current_cycle_schedule returns `:today_is_between_find_opening_and_apply_opening`" do
-        it "returns true, because that phase sits inside today_is_after_find_opens" do
+        it "returns true, because a candidate can already build an application" do
           allow(described_class).to receive(:current_cycle_schedule).and_return(:today_is_between_find_opening_and_apply_opening)
           expect(described_class.mid_cycle?).to be true
         end
@@ -424,12 +424,9 @@ module Find
         expect(result).to eq(
           {
             now_is_before_find_opens: %i[now_is_before_find_opens],
-            today_is_after_find_opens: %i[today_is_after_find_opens],
-            today_is_between_find_opening_and_apply_opening: %i[
-              today_is_after_find_opens
-              today_is_between_find_opening_and_apply_opening
-            ].sort,
-            today_is_mid_cycle: %i[today_is_after_find_opens today_is_mid_cycle].sort,
+            today_is_after_apply_opens: %i[today_is_after_apply_opens],
+            today_is_between_find_opening_and_apply_opening: %i[today_is_between_find_opening_and_apply_opening],
+            today_is_mid_cycle: %i[today_is_after_apply_opens today_is_mid_cycle].sort,
             today_is_after_apply_deadline_passed: %i[today_is_after_apply_deadline_passed],
           },
         )
