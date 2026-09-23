@@ -17,9 +17,9 @@ module RecruitmentCycleHelper
     "#{Find::CycleTimetable.previous_year - 1} to #{Find::CycleTimetable.previous_year}"
   end
 
-  def hint_for_phase(phase, year = Find::CycleTimetable.year_for_phase(phase))
-    from, to = Find::CycleTimetable.phase_range(phase, year)
-    description = I18n.t("find.cycles.#{phase}.description")
+  def hint_for_option(option, year = Find::CycleTimetable.year_for_option(option))
+    from, to = Find::CycleTimetable.option_range(option, year)
+    description = I18n.t("find.cycles.#{option}.description")
 
     safe_join(
       [

@@ -6,24 +6,24 @@
       legend: { text: "Current point in the recruitment cycle" } do %>
       <%= f.govuk_radio_button :cycle_schedule_name, "real", label: { text: t("find.cycles.real.name") } %>
       <%= f.govuk_radio_divider %>
-      <% previous_phase_year = nil %>
-      <% Find::CycleTimetable::PHASES.each_key do |phase| %>
-        <% phase_year = Find::CycleTimetable.year_for_phase(phase) %>
-        <% if previous_phase_year && phase_year != previous_phase_year %>
-          <%= f.govuk_radio_divider "#{phase_year} cycle" %>
+      <% previous_option_year = nil %>
+      <% Find::CycleTimetable::SWITCHER_OPTIONS.each_key do |option| %>
+        <% option_year = Find::CycleTimetable.year_for_option(option) %>
+        <% if previous_option_year && option_year != previous_option_year %>
+          <%= f.govuk_radio_divider "#{option_year} cycle" %>
         <% end %>
         <%= f.govuk_radio_button :cycle_schedule_name,
-              phase.to_s,
-              label: { text: t("find.cycles.#{phase}.name") },
-              hint: -> { hint_for_phase(phase, phase_year) } do %>
-          <% if phase == :apply_open %>
+              option.to_s,
+              label: { text: t("find.cycles.#{option}.name") },
+              hint: -> { hint_for_option(option, option_year) } do %>
+          <% if option == :apply_open %>
             <%= f.govuk_check_box :deadline_banner, "1", "0",
                   multiple: false,
                   label: { text: t("find.cycles.deadline_banner.name") },
                   hint: { text: t("find.cycles.deadline_banner.description") } %>
           <% end %>
         <% end %>
-        <% previous_phase_year = phase_year %>
+        <% previous_option_year = option_year %>
       <% end %>
     <% end %>
 

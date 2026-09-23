@@ -25,9 +25,9 @@ module Find
         end
       end
 
-      context "We are in the middle of the 2021 cycle and the cycle switcher has been set to 'find has reopened'" do
+      context "We are in the middle of the 2021 cycle and the cycle switcher has been set to 'apply has reopened'" do
         it "is 2022" do
-          allow(SiteSetting).to receive(:cycle_schedule).and_return(:apply_open)
+          allow(SiteSetting).to receive(:cycle_schedule).and_return(:apply_reopened)
 
           Timecop.travel(Time.zone.local(2020, 10, 6, 10, 0, 0)) do
             expect(described_class.current_year).to eq(2022)
@@ -35,14 +35,14 @@ module Find
         end
       end
 
-      it "moves to the next cycle for every phase that advances the cycle" do
-        described_class::PHASES.each do |phase, definition|
-          allow(SiteSetting).to receive(:cycle_schedule).and_return(phase)
+      it "moves to the next cycle for every option past the rollover" do
+        described_class::SWITCHER_OPTIONS.each do |option, definition|
+          allow(SiteSetting).to receive(:cycle_schedule).and_return(option)
 
           real_year = described_class.cycle_year_for_time(Time.zone.now)
           expected = definition[:advances_cycle] ? real_year + 1 : real_year
 
-          expect(described_class.current_year).to eq(expected), "wrong year for #{phase}"
+          expect(described_class.current_year).to eq(expected), "wrong year for #{option}"
         end
       end
     end
@@ -431,26 +431,34 @@ module Find
       end
     end
 
-    describe ".year_for_phase" do
-      it "advances the year for a phase that advances the cycle" do
-        expect(described_class.year_for_phase(:find_closed, 2026)).to eq(2027)
+    describe ".year_for_option" do
+      it "advances the year for an option past the rollover" do
+        expect(described_class.year_for_option(:find_closed, 2026)).to eq(2027)
       end
 
-      it "keeps the year for a phase that does not advance the cycle" do
-        expect(described_class.year_for_phase(:apply_closed, 2026)).to eq(2026)
+      it "keeps the year for an option in the cycle running now" do
+        expect(described_class.year_for_option(:apply_closed, 2026)).to eq(2026)
+      end
+
+      it "gives the same phase two years, one per option" do
+        expect(described_class.phase_for_option(:apply_open)).to eq(:apply_open)
+        expect(described_class.phase_for_option(:apply_reopened)).to eq(:apply_open)
+
+        expect(described_class.year_for_option(:apply_open, 2026)).to eq(2026)
+        expect(described_class.year_for_option(:apply_reopened, 2026)).to eq(2027)
       end
 
       it "defaults to the real cycle year for the current time when no year is given" do
         allow(described_class).to receive(:cycle_year_for_time).and_return(2026)
 
-        expect(described_class.year_for_phase(:apply_closed)).to eq(2026)
+        expect(described_class.year_for_option(:apply_closed)).to eq(2026)
       end
 
       it "does not move when a different phase is selected in the switcher" do
-        years_by_selection = described_class::PHASES.keys.index_with do |selected|
+        years_by_selection = described_class::SWITCHER_OPTIONS.keys.index_with do |selected|
           allow(SiteSetting).to receive(:cycle_schedule).and_return(selected)
 
-          described_class::PHASES.keys.index_with { |phase| described_class.year_for_phase(phase) }
+          described_class::SWITCHER_OPTIONS.keys.index_with { |option| described_class.year_for_option(option) }
         end
 
         expect(years_by_selection.values.uniq.length).to eq(1)
@@ -461,13 +469,14 @@ module Find
       it "turn on only the phase the switcher selects" do
         predicates = described_class::PHASES.keys.index_with { |phase| :"#{phase}?" }
 
-        result = described_class::PHASES.keys.index_with do |selected|
+        result = described_class::SWITCHER_OPTIONS.each_key.index_with do |selected|
           allow(described_class).to receive(:current_cycle_schedule).and_return(selected)
 
           predicates.select { |_, predicate| described_class.public_send(predicate) }.keys
         end
 
-        expect(result).to eq(described_class::PHASES.keys.index_with { |phase| [phase] })
+        expected = described_class::SWITCHER_OPTIONS.transform_values { |definition| [definition[:phase]] }
+        expect(result).to eq(expected)
       end
 
       it "names one predicate for every phase" do

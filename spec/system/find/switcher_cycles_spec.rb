@@ -39,7 +39,7 @@ RSpec.describe "switcher cycle" do
 
   scenario "Apply is open and the deadline banner is switched on" do
     when_i_visit_switcher_cycle_page
-    and_i_choose("Apply has reopened")
+    and_i_choose("Apply is open")
     and_i_check("Show the apply deadline banner")
     then_i_click_on_update_button
     and_i_should_see_the_success_banner

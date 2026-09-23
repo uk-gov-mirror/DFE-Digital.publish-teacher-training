@@ -21,11 +21,11 @@ RSpec.describe RecruitmentCycleHelper do
     end
   end
 
-  describe "#hint_for_phase" do
+  describe "#hint_for_option" do
     it "uses the phase's own boundaries" do
       allow(Find::CycleTimetable).to receive(:cycle_year_for_time).and_return(2026)
 
-      hint = helper.hint_for_phase(:apply_closed)
+      hint = helper.hint_for_option(:apply_closed)
 
       expect(hint).to eq(
         "<strong>2026 cycle.</strong> Candidates can no longer submit any subsequent applications " \
@@ -36,7 +36,7 @@ RSpec.describe RecruitmentCycleHelper do
     it "names the next cycle year and the closed window for find_closed" do
       allow(Find::CycleTimetable).to receive(:cycle_year_for_time).and_return(2026)
 
-      hint = helper.hint_for_phase(:find_closed)
+      hint = helper.hint_for_option(:find_closed)
 
       expect(hint).to eq(
         "<strong>2027 cycle.</strong> Candidates can no longer browse courses on Find " \

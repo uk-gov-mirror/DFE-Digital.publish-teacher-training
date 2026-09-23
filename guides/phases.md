@@ -11,12 +11,29 @@ They tile the cycle end to end, with no gap and no overlap. At any instant exact
 row is live. Nothing nests inside anything else, so the cycle switcher can force a
 phase and turn on that phase alone.
 
-`PHASES` lists them in the order a person walks through them, starting from Apply
-closing: `apply_closed`, `find_closed`, `apply_not_open_yet`, `apply_open`. That walk
-crosses the cycle boundary once, between the first row and the second, which is what
-`advances_cycle` marks. The switcher renders in this order and puts its divider where
-the cycle year changes, so the current cycle's option comes first and the next cycle's
-three follow.
+`PHASES` lists them in the order a cycle runs, starting from Apply closing:
+`apply_closed`, `find_closed`, `apply_not_open_yet`, `apply_open`. It says nothing
+about the cycle switcher.
+
+## What the switcher offers
+
+Which cycle year an option loads is the switcher's business, not a phase's, so it
+lives in `SWITCHER_OPTIONS`. An option is a phase plus the cycle it loads, which lets
+two options name the same phase:
+
+| option | phase | loads |
+| --- | --- | --- |
+| `apply_open` | `apply_open` | the cycle running now |
+| `apply_closed` | `apply_closed` | the cycle running now |
+| `find_closed` | `find_closed` | the cycle after the rollover |
+| `apply_not_open_yet` | `apply_not_open_yet` | the cycle after the rollover |
+| `apply_reopened` | `apply_open` | the cycle after the rollover |
+
+The list is one walk: this cycle finishes, then the next one starts. The divider falls
+where the cycle year first changes, so the current cycle's two options come first and
+the next cycle's three follow. `apply_open` and `apply_reopened` are the same phase
+seen from either side of the rollover, which is why the switcher can show Apply open
+for the cycle you are standing in as well as for the one coming.
 
 The apply deadline banner is deliberately not a row. It is a window inside
 `apply_open`, and the switcher toggles it on its own axis. The other two banners need

@@ -71,8 +71,7 @@ module Find
       },
     }.freeze
 
-    # Every recruitment cycle phase, with the boundaries it runs between and
-    # whether the cycle switcher moves the user to the next recruitment cycle.
+    # Every recruitment cycle phase, with the boundaries it runs between.
     # Everything else about a phase is derived from this table.
     #
     # A phase is a span where what a person can do differs. Find is up or down;
@@ -83,11 +82,10 @@ module Find
     # The four rows tile the cycle end to end. Nothing overlaps, so exactly one
     # row is live at any instant.
     #
-    # They run in the order a person walks through them, starting from Apply
-    # closing: Apply shuts, Find shuts, Find reopens, Apply reopens. That walk
-    # crosses the cycle boundary once, between the first row and the second,
-    # which is exactly what `advances_cycle` marks. The switcher renders its
-    # options in this order and puts a divider where the cycle year changes.
+    # They run in the order a cycle runs, starting from Apply closing.
+    #
+    # Nothing here knows about the cycle switcher. Which cycle year an option
+    # loads is the switcher's business, and lives in SWITCHER_OPTIONS.
     PHASES = {
       # Closed, not merely shut to submissions: a candidate cannot create an
       # application either. That is what separates it from `apply_not_open_yet`,
@@ -95,7 +93,6 @@ module Find
       apply_closed: {
         from: ->(year) { apply_deadline(year) },
         to: ->(year) { find_closes(year) },
-        advances_cycle: false,
       },
       # The only row that spans two cycle entries, because Find closing and Find
       # reopening are the seam between them. Indexed by the cycle it leads into,
@@ -103,27 +100,39 @@ module Find
       find_closed: {
         from: ->(year) { previous_find_closes(year) },
         to: ->(year) { find_opens(year) },
-        advances_cycle: true,
       },
       apply_not_open_yet: {
         from: ->(year) { find_opens(year) },
         to: ->(year) { apply_opens(year) },
-        advances_cycle: true,
       },
       apply_open: {
         from: ->(year) { apply_opens(year) },
         to: ->(year) { apply_deadline(year) },
-        advances_cycle: true,
       },
+    }.freeze
+
+    # What the cycle switcher offers, in the order it lists them. An option is a
+    # phase plus the cycle it loads, so two options can name the same phase:
+    # `apply_open` is Apply open in the cycle running now, `apply_reopened` is
+    # Apply open in the cycle after the rollover.
+    #
+    # The walk is this cycle finishing, then the next one starting, so the
+    # divider falls where `advances_cycle` first turns true.
+    SWITCHER_OPTIONS = {
+      apply_open: { phase: :apply_open, advances_cycle: false },
+      apply_closed: { phase: :apply_closed, advances_cycle: false },
+      find_closed: { phase: :find_closed, advances_cycle: true },
+      apply_not_open_yet: { phase: :apply_not_open_yet, advances_cycle: true },
+      apply_reopened: { phase: :apply_open, advances_cycle: true },
     }.freeze
 
     def self.current_year
       now = Time.zone.now
       current_year = cycle_year_for_time(now)
 
-      # If the cycle switcher has been set to 'apply has reopened' then
+      # If the cycle switcher has been set to an option past the rollover then
       # we want to request next year's courses from the TTAPI
-      if PHASES.dig(current_cycle_schedule, :advances_cycle)
+      if SWITCHER_OPTIONS.dig(current_cycle_schedule, :advances_cycle)
         current_year + 1
       else
         current_year
@@ -281,14 +290,17 @@ module Find
     end
 
     # The hints describe a fixed set of choices, so they read the real cycle year
-    # rather than `current_year`, which advances for whichever phase is currently
-    # selected and would make the page describe itself.
+    # rather than `current_year`, which advances for whichever option is selected
+    # and would make the page describe itself.
     #
-    # Returns the cycle the option *leads to* if the switcher is set to this
-    # phase, not the cycle year the phase itself occurs in.
-    def self.year_for_phase(phase, year = cycle_year_for_time(Time.zone.now))
-      PHASES.dig(phase, :advances_cycle) ? year + 1 : year
+    # Returns the cycle the option loads, not the cycle the phase occurs in.
+    def self.year_for_option(option, year = cycle_year_for_time(Time.zone.now))
+      SWITCHER_OPTIONS.dig(option, :advances_cycle) ? year + 1 : year
     end
+
+    def self.phase_for_option(option) = SWITCHER_OPTIONS.fetch(option).fetch(:phase)
+
+    def self.option_range(option, year) = phase_range(phase_for_option(option), year)
 
     def self.phases_in_time
       year = current_year
@@ -299,8 +311,8 @@ module Find
       end
     end
 
-    # The phases tile the cycle and never overlap, so a phase forced by the
-    # switcher turns on itself and nothing else. An unknown value, including
+    # The phases tile the cycle and never overlap, so an option forced by the
+    # switcher turns on its phase and nothing else. An unknown value, including
     # :real and anything stale left in Redis, matches no phase.
     #
     # Private, so a phase key never travels outside this class. Callers ask one
@@ -308,7 +320,7 @@ module Find
     def self.phase_in_time?(time_period)
       return phases_in_time[time_period] if current_cycle_schedule == :real
 
-      current_cycle_schedule == time_period
+      SWITCHER_OPTIONS.dig(current_cycle_schedule, :phase) == time_period
     end
     private_class_method :phase_in_time?
 

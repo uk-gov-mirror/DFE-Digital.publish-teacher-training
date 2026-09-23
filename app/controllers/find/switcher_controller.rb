@@ -22,15 +22,17 @@ module Find
 
   private
 
-    # The banner only means anything inside the apply window, so selecting any
-    # other phase clears it rather than leaving it armed for next time.
+    # The deadline banner belongs to the cycle that is ending, so it is offered
+    # against `apply_open` alone. Any other option clears it rather than leaving
+    # it armed for next time.
     def deadline_banner_wanted?
       form = params[:find_change_cycle_form]
+
       form[:cycle_schedule_name] == "apply_open" && form[:deadline_banner] == "1"
     end
 
     def permitted_schedules
-      %w[real] + Find::CycleTimetable::PHASES.keys.map(&:to_s)
+      %w[real] + Find::CycleTimetable::SWITCHER_OPTIONS.keys.map(&:to_s)
     end
   end
 end

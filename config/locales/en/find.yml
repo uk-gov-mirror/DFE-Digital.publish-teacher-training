@@ -11,6 +11,9 @@ en:
         name: Find has closed
         description: Candidates can no longer browse courses on Find
       apply_open:
+        name: Apply is open
+        description: Candidates are able to apply for the courses in the current cycle
+      apply_reopened:
         name: Apply has reopened
         description: Candidates are able to apply for the courses in the new cycle.
       apply_not_open_yet:
