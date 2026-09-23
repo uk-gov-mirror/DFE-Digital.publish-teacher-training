@@ -230,8 +230,16 @@ module Find
       Time.zone.now.between?(apply_deadline, find_closes)
     end
 
-    def self.find_open? = !phase_in_time?(:find_closed)
-    def self.find_down? = phase_in_time?(:find_closed)
+    # One predicate per phase: the timetable's own vocabulary. Everything below
+    # is expressed in terms of these rather than reaching for a phase key, so
+    # each span has a single source of truth and callers keep a name that says
+    # why they are asking.
+    def self.find_closed? = phase_in_time?(:find_closed)
+    def self.apply_not_open_yet? = phase_in_time?(:apply_not_open_yet)
+    def self.apply_open? = phase_in_time?(:apply_open)
+    def self.apply_closed? = phase_in_time?(:apply_closed)
+
+    def self.find_open? = !find_closed?
 
     # Whether a candidate can create an application for the cycle on display.
     #
@@ -241,34 +249,31 @@ module Find
     # phases differ in whether Apply takes the finished application, but inside
     # Find only in what the page says about the wait.
     def self.can_create_application?
-      phase_in_time?(:apply_not_open_yet) ||
-        phase_in_time?(:apply_open)
+      apply_not_open_yet? || apply_open?
     end
 
     # The stable open stage: Apply is taking applications and no deadline banner
     # is up yet. Nothing in the app branches on this. It names the ordinary state
     # that `mid_cycle`, the instant, sits inside.
     def self.mid_cycle?
-      phase_in_time?(:apply_open) && !show_apply_deadline_banner?
+      apply_open? && !show_apply_deadline_banner?
     end
 
     # The deadline banner is a window inside `apply_open`, not a phase: nothing a
     # candidate can do changes when it appears. The switcher therefore toggles it
     # on its own rather than reaching it by picking a phase.
     def self.show_apply_deadline_banner?
-      return false unless phase_in_time?(:apply_open)
+      return false unless apply_open?
       return SiteSetting.deadline_banner? unless current_cycle_schedule == :real
 
       Time.zone.now.between?(first_deadline_banner, apply_deadline)
     end
 
-    def self.apply_deadline_passed = phase_in_time?(:apply_closed)
+    def self.apply_deadline_passed = apply_closed?
 
-    def self.show_cycle_closed_banner? = phase_in_time?(:apply_closed)
+    def self.show_cycle_closed_banner? = apply_closed?
 
-    def self.show_apply_opens_soon_banner?
-      phase_in_time?(:apply_not_open_yet)
-    end
+    def self.show_apply_opens_soon_banner? = apply_not_open_yet?
 
     def self.phase_range(phase, year)
       definition = PHASES.fetch(phase)
@@ -297,11 +302,15 @@ module Find
     # The phases tile the cycle and never overlap, so a phase forced by the
     # switcher turns on itself and nothing else. An unknown value, including
     # :real and anything stale left in Redis, matches no phase.
+    #
+    # Private, so a phase key never travels outside this class. Callers ask one
+    # of the predicates above, which say why they are asking.
     def self.phase_in_time?(time_period)
       return phases_in_time[time_period] if current_cycle_schedule == :real
 
       current_cycle_schedule == time_period
     end
+    private_class_method :phase_in_time?
 
     def self.date(name, year = current_year)
       real_schedule_for(year.to_i).fetch(name)

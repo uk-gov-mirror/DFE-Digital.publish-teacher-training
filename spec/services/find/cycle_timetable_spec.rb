@@ -158,22 +158,22 @@ module Find
       end
     end
 
-    describe ".find_down?" do
+    describe ".find_closed?" do
       it "returns true when it is after previous Find closes and before it opens" do
         Timecop.travel(Time.zone.local(2021, 10, 5, 1, 0, 0)) do
-          expect(described_class.find_down?).to be true
+          expect(described_class.find_closed?).to be true
         end
       end
 
       it "returns false before Find closes" do
         Timecop.travel(Time.zone.local(2021, 9, 21, 17, 0, 0)) do
-          expect(described_class.find_down?).to be false
+          expect(described_class.find_closed?).to be false
         end
       end
 
       it "returns false when Find has reopened" do
         Timecop.travel(Time.zone.local(2021, 10, 5, 10, 0, 0)) do
-          expect(described_class.find_down?).to be false
+          expect(described_class.find_closed?).to be false
         end
       end
     end
@@ -457,15 +457,21 @@ module Find
       end
     end
 
-    describe ".phase_in_time?" do
-      it "turns on only the phase the switcher selects" do
+    describe "the phase predicates" do
+      it "turn on only the phase the switcher selects" do
+        predicates = described_class::PHASES.keys.index_with { |phase| :"#{phase}?" }
+
         result = described_class::PHASES.keys.index_with do |selected|
           allow(described_class).to receive(:current_cycle_schedule).and_return(selected)
 
-          described_class::PHASES.keys.select { |phase| described_class.phase_in_time?(phase) }
+          predicates.select { |_, predicate| described_class.public_send(predicate) }.keys
         end
 
         expect(result).to eq(described_class::PHASES.keys.index_with { |phase| [phase] })
+      end
+
+      it "names one predicate for every phase" do
+        expect(described_class::PHASES.keys).to all(satisfy { |phase| described_class.respond_to?(:"#{phase}?") })
       end
     end
   end

@@ -19,7 +19,18 @@ the cycle year changes, so the current cycle's option comes first and the next c
 three follow.
 
 The apply deadline banner is deliberately not a row. It is a window inside
-`apply_open`, and the switcher toggles it on its own axis.
+`apply_open`, and the switcher toggles it on its own axis. The other two banners need
+no such control, because each covers exactly one phase: picking the phase produces the
+banner, and a separate toggle would let the switcher show states the service cannot.
+
+## Asking the timetable
+
+`CycleTimetable` has one predicate per phase, `find_closed?`, `apply_not_open_yet?`,
+`apply_open?` and `apply_closed?`. Everything else is written in terms of those, so a
+span has one source of truth and each caller keeps a name that says why it is asking:
+`show_cycle_closed_banner?` in the banner component, `apply_deadline_passed` in the
+controllers, `can_create_application?` at the apply button. The lookup underneath,
+`phase_in_time?`, is private, so a phase key never travels outside the class.
 
 The dates below are placeholders. Every cycle has this shape, and only the exact dates
 move from year to year.
@@ -61,7 +72,7 @@ into, because A puts all but a sliver of those nine hours in that cycle.
 
 ### B. Find opens
 
-- `find_down?` goes false, so `Find::ApplicationController#redirect_to_cycle_has_ended_if_find_is_down`
+- `find_closed?` goes false, so `Find::ApplicationController#redirect_to_cycle_has_ended_if_find_is_down`
   stops sending every Find page to `/cycle-has-ended`
 - `find_closed` ends and `apply_not_open_yet` begins
 - `can_create_application?` goes true, so the apply button renders in place of the
@@ -113,7 +124,7 @@ Find stays open and every course stays browsable.
 
 ### F. Find closes
 
-- `find_down?` goes true, so all of Find redirects to `/cycle-has-ended`
+- `find_closed?` goes true, so all of Find redirects to `/cycle-has-ended`
 - `apply_closed` ends and the next cycle's `find_closed` begins
 - `current_and_open?` goes false, so Publish's title reverts to "New cycle" and the two
   Publish views show their notice again
