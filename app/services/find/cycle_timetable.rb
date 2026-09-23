@@ -210,8 +210,15 @@ module Find
       date(:apply_opens, next_year)
     end
 
+    # The stable open stage of the cycle: Apply is taking applications, Find is
+    # up, no banner is showing and the cycle has settled.
+    #
+    # Anchored on `apply_opens` rather than `find_opens` so that lengthening the
+    # pre-Apply week cannot swallow it. Two months rather than a few days because
+    # the first 30 days after Find opens are the rollover grace window, where the
+    # previous cycle is still served to support users.
     def self.mid_cycle(year = current_year)
-      date(:find_opens, year) + 2.months
+      date(:apply_opens, year) + 2.months
     end
 
     def self.preview_mode?
@@ -221,16 +228,23 @@ module Find
     def self.find_open? = !phase_in_time?(:find_closed)
     def self.find_down? = phase_in_time?(:find_closed)
 
-    # Whether a candidate can start an application for the cycle on display.
+    # Whether a candidate can create an application for the cycle on display.
     #
     # This spans two phases rather than reading one. Apply accepts a part built
     # application from the moment Find opens, a week before it accepts
     # submissions, so the apply button belongs on the page for both. The two
     # phases differ in whether Apply takes the finished application, but inside
     # Find only in what the page says about the wait.
-    def self.mid_cycle?
+    def self.can_create_application?
       phase_in_time?(:apply_not_open_yet) ||
         phase_in_time?(:apply_open)
+    end
+
+    # The stable open stage: Apply is taking applications and no deadline banner
+    # is up yet. Nothing in the app branches on this. It names the ordinary state
+    # that `mid_cycle`, the instant, sits inside.
+    def self.mid_cycle?
+      phase_in_time?(:apply_open) && !phase_in_time?(:apply_closing_soon)
     end
 
     def self.show_apply_deadline_banner? = phase_in_time?(:apply_closing_soon)

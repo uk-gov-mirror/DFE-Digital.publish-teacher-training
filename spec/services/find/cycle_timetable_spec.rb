@@ -178,43 +178,69 @@ module Find
       end
     end
 
-    describe ".mid_cycle??" do
+    describe ".can_create_application?" do
       it "returns true after Find has opened" do
         Timecop.travel(Time.zone.local(2021, 10, 5, 10, 0, 0)) do
-          expect(described_class.mid_cycle?).to be true
+          expect(described_class.can_create_application?).to be true
         end
       end
 
       it "returns false after the apply_deadline" do
         Timecop.travel(Time.zone.local(2021, 9, 21, 19, 0, 0)) do
-          expect(described_class.mid_cycle?).to be false
+          expect(described_class.can_create_application?).to be false
         end
       end
 
       context "when current_cycle_schedule returns `:apply_open`" do
         it "returns true" do
           allow(described_class).to receive(:current_cycle_schedule).and_return(:apply_open)
-          expect(described_class.mid_cycle?).to be true
+          expect(described_class.can_create_application?).to be true
         end
       end
 
       context "when current_cycle_schedule returns `:apply_closing_soon`" do
         it "returns true so that candidates can apply to courses in the current cycle" do
           allow(described_class).to receive(:current_cycle_schedule).and_return(:apply_closing_soon)
-          expect(described_class.mid_cycle?).to be true
+          expect(described_class.can_create_application?).to be true
         end
       end
 
       context "when current_cycle_schedule returns `:apply_not_open_yet`" do
         it "returns true, because a candidate can already build an application" do
           allow(described_class).to receive(:current_cycle_schedule).and_return(:apply_not_open_yet)
-          expect(described_class.mid_cycle?).to be true
+          expect(described_class.can_create_application?).to be true
         end
       end
 
       context "when current_cycle_schedule returns `:apply_closed`" do
         it "returns false" do
           allow(described_class).to receive(:current_cycle_schedule).and_return(:apply_closed)
+          expect(described_class.can_create_application?).to be false
+        end
+      end
+    end
+
+    describe ".mid_cycle?" do
+      it "returns true at the instant mid_cycle names" do
+        Timecop.travel(described_class.mid_cycle(2022)) do
+          expect(described_class.mid_cycle?).to be true
+        end
+      end
+
+      it "returns false during the week before Apply opens" do
+        Timecop.travel(described_class.find_opens(2022) + 1.hour) do
+          expect(described_class.mid_cycle?).to be false
+        end
+      end
+
+      it "returns false once the deadline banner is up" do
+        Timecop.travel(described_class.first_deadline_banner(2022) + 1.day) do
+          expect(described_class.mid_cycle?).to be false
+        end
+      end
+
+      it "returns false after the apply deadline" do
+        Timecop.travel(described_class.apply_deadline(2022) + 1.hour) do
           expect(described_class.mid_cycle?).to be false
         end
       end

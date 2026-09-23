@@ -11,6 +11,7 @@ RSpec.describe "Find pages under each cycle phase", travel: Time.zone.local(2026
   {
     real: {
       find_open: true,
+      can_create_application: false,
       mid_cycle: false,
       deadline_banner: false,
       closed_banner: true,
@@ -19,6 +20,7 @@ RSpec.describe "Find pages under each cycle phase", travel: Time.zone.local(2026
     },
     find_closed: {
       find_open: false,
+      can_create_application: false,
       mid_cycle: false,
       deadline_banner: false,
       closed_banner: false,
@@ -27,6 +29,7 @@ RSpec.describe "Find pages under each cycle phase", travel: Time.zone.local(2026
     },
     apply_open: {
       find_open: true,
+      can_create_application: true,
       mid_cycle: true,
       deadline_banner: false,
       closed_banner: false,
@@ -35,7 +38,8 @@ RSpec.describe "Find pages under each cycle phase", travel: Time.zone.local(2026
     },
     apply_not_open_yet: {
       find_open: true,
-      mid_cycle: true,
+      can_create_application: true,
+      mid_cycle: false,
       deadline_banner: false,
       closed_banner: false,
       apply_soon_banner: true,
@@ -43,7 +47,8 @@ RSpec.describe "Find pages under each cycle phase", travel: Time.zone.local(2026
     },
     apply_closing_soon: {
       find_open: true,
-      mid_cycle: true,
+      can_create_application: true,
+      mid_cycle: false,
       deadline_banner: true,
       closed_banner: false,
       apply_soon_banner: false,
@@ -51,6 +56,7 @@ RSpec.describe "Find pages under each cycle phase", travel: Time.zone.local(2026
     },
     apply_closed: {
       find_open: true,
+      can_create_application: false,
       mid_cycle: false,
       deadline_banner: false,
       closed_banner: true,
@@ -65,6 +71,7 @@ RSpec.describe "Find pages under each cycle phase", travel: Time.zone.local(2026
         expect(
           {
             find_open: Find::CycleTimetable.find_open?,
+            can_create_application: Find::CycleTimetable.can_create_application?,
             mid_cycle: Find::CycleTimetable.mid_cycle?,
             deadline_banner: Find::CycleTimetable.show_apply_deadline_banner?,
             closed_banner: Find::CycleTimetable.show_cycle_closed_banner?,
