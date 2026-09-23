@@ -16,7 +16,7 @@ en:
       today_is_after_apply_opens:
         name: Apply has reopened
         description: Candidates are able to apply for the courses in the new cycle.
-      today_is_between_find_opening_and_apply_opening:
+      apply_not_open_yet:
         name: Find has reopened, but Apply has not
         description: Candidates can browse courses on Find. Courses returned are from the next recruitment cycle
       updated: Cycle schedule updated

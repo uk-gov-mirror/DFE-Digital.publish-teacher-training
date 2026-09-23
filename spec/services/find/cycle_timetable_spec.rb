@@ -205,9 +205,9 @@ module Find
         end
       end
 
-      context "when current_cycle_schedule returns `:today_is_between_find_opening_and_apply_opening`" do
+      context "when current_cycle_schedule returns `:apply_not_open_yet`" do
         it "returns true, because a candidate can already build an application" do
-          allow(described_class).to receive(:current_cycle_schedule).and_return(:today_is_between_find_opening_and_apply_opening)
+          allow(described_class).to receive(:current_cycle_schedule).and_return(:apply_not_open_yet)
           expect(described_class.mid_cycle?).to be true
         end
       end
@@ -418,7 +418,7 @@ module Find
           {
             find_closed: %i[find_closed],
             today_is_after_apply_opens: %i[today_is_after_apply_opens],
-            today_is_between_find_opening_and_apply_opening: %i[today_is_between_find_opening_and_apply_opening],
+            apply_not_open_yet: %i[apply_not_open_yet],
             apply_closing_soon: %i[today_is_after_apply_opens apply_closing_soon].sort,
             today_is_after_apply_deadline_passed: %i[today_is_after_apply_deadline_passed],
           },

@@ -97,7 +97,7 @@ module Find
         to: ->(year) { find_opens(year) },
         advances_cycle: true,
       },
-      today_is_between_find_opening_and_apply_opening: {
+      apply_not_open_yet: {
         from: ->(year) { find_opens(year) },
         to: ->(year) { apply_opens(year) },
         advances_cycle: true,
@@ -226,7 +226,7 @@ module Find
     # phases differ only in what the page says about the wait, never in what a
     # candidate can do.
     def self.mid_cycle?
-      phase_in_time?(:today_is_between_find_opening_and_apply_opening) ||
+      phase_in_time?(:apply_not_open_yet) ||
         phase_in_time?(:today_is_after_apply_opens)
     end
 
@@ -237,7 +237,7 @@ module Find
     def self.show_cycle_closed_banner? = phase_in_time?(:today_is_after_apply_deadline_passed)
 
     def self.show_apply_opens_soon_banner?
-      phase_in_time?(:today_is_between_find_opening_and_apply_opening)
+      phase_in_time?(:apply_not_open_yet)
     end
 
     def self.phase_range(phase, year)

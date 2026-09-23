@@ -33,7 +33,7 @@ RSpec.describe "Find pages under each cycle phase", travel: Time.zone.local(2026
       apply_soon_banner: false,
       year: 2027,
     },
-    today_is_between_find_opening_and_apply_opening: {
+    apply_not_open_yet: {
       find_open: true,
       mid_cycle: true,
       deadline_banner: false,
