@@ -21,7 +21,7 @@ RSpec.describe "switcher cycle" do
     visit find_cycles_path
 
     expect(page).to have_content("2024 cycle. Candidates are able to apply for the courses in the new cycle.")
-    expect(page).to have_content("2023 cycle. Candidates can see upcoming application deadlines")
+    expect(page).to have_content("2023 cycle. Candidates can no longer submit any subsequent applications")
   end
 
   scenario "Emphasises the cycle year in each hint" do
@@ -34,12 +34,13 @@ RSpec.describe "switcher cycle" do
   scenario "Divides the switcher options where the recruitment cycle changes" do
     visit find_cycles_path
 
-    expect(page).to have_css(".govuk-radios__divider", text: "2024 cycle", exact_text: true)
+    expect(page).to have_css(".govuk-radios__divider", text: "2023 cycle", exact_text: true)
   end
 
-  scenario "Mid cycle and deadlines should be displayed" do
+  scenario "Apply is open and the deadline banner is switched on" do
     when_i_visit_switcher_cycle_page
-    and_i_choose("Mid cycle and deadlines should be displayed")
+    and_i_choose("Apply has reopened")
+    and_i_check("Show the apply deadline banner")
     then_i_click_on_update_button
     and_i_should_see_the_success_banner
     and_i_visit_find_results_page
@@ -105,6 +106,10 @@ RSpec.describe "switcher cycle" do
 
   def and_i_choose(option)
     page.choose(option)
+  end
+
+  def and_i_check(option)
+    page.check(option)
   end
 
   def then_i_click_on_update_button

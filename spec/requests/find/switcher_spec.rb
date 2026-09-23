@@ -10,12 +10,12 @@ RSpec.describe "Find switcher", service: :find, type: :request do
 
   describe "POST /cycles" do
     it "keeps the current schedule when the submitted phase is not known" do
-      SiteSetting.set(name: "cycle_schedule", value: "apply_closing_soon")
+      SiteSetting.set(name: "cycle_schedule", value: "apply_open")
 
       post find_switch_cycle_schedule_path,
            params: { find_change_cycle_form: { cycle_schedule_name: "not_a_phase" } }
 
-      expect(Find::CycleTimetable.current_cycle_schedule).to eq(:apply_closing_soon)
+      expect(Find::CycleTimetable.current_cycle_schedule).to eq(:apply_open)
     end
   end
 end

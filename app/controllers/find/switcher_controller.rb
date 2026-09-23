@@ -15,11 +15,19 @@ module Find
       end
 
       SiteSetting.set(name: "cycle_schedule", value: new_cycle)
+      SiteSetting.set(name: "deadline_banner", value: deadline_banner_wanted?.to_s)
       flash[:success] = I18n.t("cycles.updated")
       redirect_to find_cycles_path
     end
 
   private
+
+    # The banner only means anything inside the apply window, so selecting any
+    # other phase clears it rather than leaving it armed for next time.
+    def deadline_banner_wanted?
+      form = params[:find_change_cycle_form]
+      form[:cycle_schedule_name] == "apply_open" && form[:deadline_banner] == "1"
+    end
 
     def permitted_schedules
       %w[real] + Find::CycleTimetable::PHASES.keys.map(&:to_s)

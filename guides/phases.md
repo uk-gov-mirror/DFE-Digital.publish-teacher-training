@@ -1,20 +1,19 @@
 # Recruitment cycle phases
 
-Find describes where it is in the recruitment cycle with five phases, declared in
+Find describes where it is in the recruitment cycle with four phases, declared in
 `Find::CycleTimetable::PHASES` (`app/services/find/cycle_timetable.rb`).
 
-Four of them tile the cycle end to end, with no gap and no overlap: `find_closed`,
-`apply_not_open_yet`, `apply_open`, `apply_closed`, and then the next cycle's
-`find_closed`. At any instant exactly one of the four is running. The fifth,
-`apply_closing_soon`, is the deadline banner window and sits inside `apply_open`,
-because it is a banner rather than a separate state.
+**A phase is a span where what a person can do differs.** Find is up or down. Apply
+takes a submission or it does not. A span where only the wording on the page changes
+is not a phase. That test is what keeps the table to four rows.
 
-The cycle switcher on non-production environments sets a single phase, so
-`Find::CycleTimetable.implied_phases` works out which other phases that choice turns
-on by comparing the declared ranges. Containment is derived from the ranges
-themselves, so a phase that is moved or added stays consistent without a second table
-to keep in step. Today only one pair is nested, so `implied_phases` returns the phase
-alone in four cases out of five.
+They tile one cycle year end to end, with no gap and no overlap: `find_closed`,
+`apply_not_open_yet`, `apply_open`, `apply_closed`, and then the next cycle's
+`find_closed`. At any instant exactly one row is live. Nothing nests inside anything
+else, so the cycle switcher can force a phase and turn on that phase alone.
+
+The apply deadline banner is deliberately not a row. It is a window inside
+`apply_open`, and the switcher toggles it on its own axis.
 
 The dates below are placeholders. Every cycle has this shape, and only the exact dates
 move from year to year.
@@ -33,7 +32,7 @@ E  15 Sep 2026 18:00   apply_deadline(2026)
 F  28 Sep 2026 23:59   find_closes(2026)
 ```
 
-Five of the six are phase edges. A is not: no phase starts or ends there.
+Four of the six are phase edges. A and D are not. A rolls the cycle year, D changes a banner.
 
 ### A. Midnight, nine hours before Find opens
 
@@ -84,16 +83,17 @@ from C.
 
 ### D. First deadline banner
 
-- `apply_closing_soon` begins, inside `apply_open`, which keeps running
+- the layout banner switches to the apply-by-deadline variant
 - `mid_cycle?` goes false, since a banner is now up. Nothing in the app branches on
   this, and the apply button is unaffected: it reads `can_create_application?`
-- the layout banner switches to the apply-by-deadline variant
+
+No phase begins or ends here. `apply_open` keeps running.
 
 Nothing else.
 
 ### E. Apply deadline
 
-- `apply_open` and `apply_closing_soon` both end, and `apply_closed` begins
+- `apply_open` ends and `apply_closed` begins
 - `can_create_application?` goes false, so the apply button is replaced by the
   end-of-cycle notice
 - `apply_deadline_passed` goes true, so a saved course gains a red "Not accepting
@@ -151,8 +151,8 @@ deadline banner window.
 
 > is this the stable open stage, Apply taking applications and no banner up?
 
-It is `apply_open` minus `apply_closing_soon`, so C to D. It exists to name the ordinary
-state, and `mid_cycle`, the instant, sits one day inside it.
+It is `apply_open` with the deadline banner not yet up, so C to D. It exists to name
+the ordinary state, and `mid_cycle`, the instant, sits inside it.
 
 ## The full cycle
 
@@ -169,8 +169,8 @@ gantt
     apply_open 342d             :active, t3, 2000-10-08 09:00, 2001-09-15 18:00
     apply_closed 13d            :done, t4, 2001-09-15 18:00, 2001-09-28 23:59
 
-    section Sits inside apply_open
-    apply_closing_soon 65d      :crit, i1, 2001-07-12 09:00, 2001-09-15 18:00
+    section Not a phase, a banner window inside apply_open
+    deadline banner 65d         :crit, i1, 2001-07-12 09:00, 2001-09-15 18:00
 ```
 
 ## The opening week
@@ -209,9 +209,11 @@ gantt
 | --- | --- | --- | --- |
 | `find_closed` | `find_closes` of the previous cycle | `find_opens` | none |
 | `apply_not_open_yet` | `find_opens` | `apply_opens` | none |
-| `apply_open` | `apply_opens` | `apply_deadline` | contains `apply_closing_soon` |
-| `apply_closing_soon` | `first_deadline_banner` | `apply_deadline` | inside `apply_open` |
+| `apply_open` | `apply_opens` | `apply_deadline` | none |
 | `apply_closed` | `apply_deadline` | `find_closes` | none |
+
+The deadline banner is not in this table. It runs `first_deadline_banner` to
+`apply_deadline`, inside `apply_open`, and `show_apply_deadline_banner?` reads it.
 
 `find_closed` is the only row that spans two entries of `CYCLE_DATES`, because Find
 shutting and Find reopening are the seam between two cycles. Every other row reads one
@@ -222,4 +224,4 @@ Two names carry the words "mid cycle", and they do not mean the same span:
 | Name | Meaning |
 | --- | --- |
 | `mid_cycle(year)` | an instant, `apply_opens` plus two months, the stable open stage, used as the default clock for unpinned specs |
-| `mid_cycle?` | a predicate, `apply_open` minus `apply_closing_soon`, so `apply_opens` to `first_deadline_banner` |
+| `mid_cycle?` | a predicate, `apply_open` with no deadline banner up, so `apply_opens` to `first_deadline_banner` |

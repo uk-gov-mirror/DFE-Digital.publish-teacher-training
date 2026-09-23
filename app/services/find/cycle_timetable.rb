@@ -73,25 +73,16 @@ module Find
 
     # Every recruitment cycle phase, with the boundaries it runs between and
     # whether the cycle switcher moves the user to the next recruitment cycle.
-    # Everything else about a phase is derived from this table. Declared in
-    # the order a person actually walks through time — the switcher renders
-    # its options in this order too, and emits a divider wherever the cycle
-    # year changes between neighbours, so reordering this table reorders the
-    # page.
+    # Everything else about a phase is derived from this table.
+    #
+    # A phase is a span where what a person can do differs. Find is up or down;
+    # Apply takes a submission or does not. A span where only the wording on the
+    # page changes is not a phase, which is why the deadline banner is a window
+    # inside `apply_open` rather than a row here.
+    #
+    # The four rows tile one cycle year end to end, in the order a cycle runs.
+    # Nothing overlaps, so exactly one row is live at any instant.
     PHASES = {
-      apply_closing_soon: {
-        from: ->(year) { first_deadline_banner(year) },
-        to: ->(year) { apply_deadline(year) },
-        advances_cycle: false,
-      },
-      # Closed, not merely shut to submissions: a candidate cannot create an
-      # application either. That is what separates it from `apply_not_open_yet`,
-      # where an application can be built but not sent. Find stays up throughout.
-      apply_closed: {
-        from: ->(year) { apply_deadline(year) },
-        to: ->(year) { find_closes(year) },
-        advances_cycle: false,
-      },
       # The only row that spans two cycle entries, because Find closing and Find
       # reopening are the seam between them. Indexed by the cycle it leads into,
       # which is where `cycle_year_for_time` puts all but a sliver of it.
@@ -109,6 +100,14 @@ module Find
         from: ->(year) { apply_opens(year) },
         to: ->(year) { apply_deadline(year) },
         advances_cycle: true,
+      },
+      # Closed, not merely shut to submissions: a candidate cannot create an
+      # application either. That is what separates it from `apply_not_open_yet`,
+      # where an application can be built but not sent. Find stays up throughout.
+      apply_closed: {
+        from: ->(year) { apply_deadline(year) },
+        to: ->(year) { find_closes(year) },
+        advances_cycle: false,
       },
     }.freeze
 
@@ -244,10 +243,18 @@ module Find
     # is up yet. Nothing in the app branches on this. It names the ordinary state
     # that `mid_cycle`, the instant, sits inside.
     def self.mid_cycle?
-      phase_in_time?(:apply_open) && !phase_in_time?(:apply_closing_soon)
+      phase_in_time?(:apply_open) && !show_apply_deadline_banner?
     end
 
-    def self.show_apply_deadline_banner? = phase_in_time?(:apply_closing_soon)
+    # The deadline banner is a window inside `apply_open`, not a phase: nothing a
+    # candidate can do changes when it appears. The switcher therefore toggles it
+    # on its own rather than reaching it by picking a phase.
+    def self.show_apply_deadline_banner?
+      return false unless phase_in_time?(:apply_open)
+      return SiteSetting.deadline_banner? unless current_cycle_schedule == :real
+
+      Time.zone.now.between?(first_deadline_banner, apply_deadline)
+    end
 
     def self.apply_deadline_passed = phase_in_time?(:apply_closed)
 
@@ -281,30 +288,13 @@ module Find
       end
     end
 
-    # A phase turns on every phase whose range contains its own. The switcher
-    # picks one phase, so it has to work the containment out for itself. Only
-    # one nesting is left: the deadline banner window sits inside the apply
-    # window, because it is a banner rather than a separate state.
-    def self.implied_phases(phase)
-      # Catches :real, and any stale value left in Redis from before the
-      # allowlist of phases existed.
-      return [phase] unless PHASES.key?(phase)
-
-      year = cycle_year_for_time(Time.zone.now)
-      from, to = phase_range(phase, year)
-
-      PHASES.keys.select do |candidate|
-        candidate_from, candidate_to = phase_range(candidate, year)
-        candidate_from <= from && to <= candidate_to
-      end
-    end
-
+    # The phases tile the cycle and never overlap, so a phase forced by the
+    # switcher turns on itself and nothing else. An unknown value, including
+    # :real and anything stale left in Redis, matches no phase.
     def self.phase_in_time?(time_period)
-      if current_cycle_schedule == :real
-        phases_in_time[time_period]
-      else
-        implied_phases(current_cycle_schedule).include?(time_period)
-      end
+      return phases_in_time[time_period] if current_cycle_schedule == :real
+
+      current_cycle_schedule == time_period
     end
 
     def self.date(name, year = current_year)

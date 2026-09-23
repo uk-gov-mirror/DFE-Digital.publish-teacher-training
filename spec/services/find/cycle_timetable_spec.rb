@@ -198,13 +198,6 @@ module Find
         end
       end
 
-      context "when current_cycle_schedule returns `:apply_closing_soon`" do
-        it "returns true so that candidates can apply to courses in the current cycle" do
-          allow(described_class).to receive(:current_cycle_schedule).and_return(:apply_closing_soon)
-          expect(described_class.can_create_application?).to be true
-        end
-      end
-
       context "when current_cycle_schedule returns `:apply_not_open_yet`" do
         it "returns true, because a candidate can already build an application" do
           allow(described_class).to receive(:current_cycle_schedule).and_return(:apply_not_open_yet)
@@ -247,10 +240,30 @@ module Find
     end
 
     describe ".show_apply_deadline_banner?" do
-      context "when current_cycle_schedule returns `:apply_closing_soon`" do
-        it "still returns true" do
-          allow(described_class).to receive(:current_cycle_schedule).and_return(:apply_closing_soon)
+      context "when the switcher forces apply_open with the banner on" do
+        it "returns true" do
+          allow(described_class).to receive(:current_cycle_schedule).and_return(:apply_open)
+          allow(SiteSetting).to receive(:deadline_banner?).and_return(true)
+
           expect(described_class.show_apply_deadline_banner?).to be true
+        end
+      end
+
+      context "when the switcher forces apply_open with the banner off" do
+        it "returns false" do
+          allow(described_class).to receive(:current_cycle_schedule).and_return(:apply_open)
+          allow(SiteSetting).to receive(:deadline_banner?).and_return(false)
+
+          expect(described_class.show_apply_deadline_banner?).to be false
+        end
+      end
+
+      context "when the switcher forces a phase outside the apply window" do
+        it "returns false even with the banner on" do
+          allow(described_class).to receive(:current_cycle_schedule).and_return(:apply_closed)
+          allow(SiteSetting).to receive(:deadline_banner?).and_return(true)
+
+          expect(described_class.show_apply_deadline_banner?).to be false
         end
       end
 
@@ -395,11 +408,17 @@ module Find
         expect(described_class::PHASES.keys).to match_array(described_class.phases_in_time.keys)
       end
 
-      it "gives apply_closing_soon the first deadline banner as its start" do
-        from, to = described_class.phase_range(:apply_closing_soon, 2026)
+      it "runs apply_open for the whole apply window" do
+        from, to = described_class.phase_range(:apply_open, 2026)
 
-        expect(from).to eq(described_class.date(:first_deadline_banner, 2026))
+        expect(from).to eq(described_class.date(:apply_opens, 2026))
         expect(to).to eq(described_class.date(:apply_deadline, 2026))
+      end
+
+      it "tiles the cycle end to end, with no gap and no overlap" do
+        ranges = described_class::PHASES.keys.map { |phase| described_class.phase_range(phase, 2026) }
+
+        expect(ranges.each_cons(2).map { |(_, a_to), (b_from, _)| a_to == b_from }).to all(be true)
       end
 
       it "runs find_closed from Find closing in the previous cycle to Find reopening" do
@@ -416,13 +435,13 @@ module Find
       end
 
       it "keeps the year for a phase that does not advance the cycle" do
-        expect(described_class.year_for_phase(:apply_closing_soon, 2026)).to eq(2026)
+        expect(described_class.year_for_phase(:apply_closed, 2026)).to eq(2026)
       end
 
       it "defaults to the real cycle year for the current time when no year is given" do
         allow(described_class).to receive(:cycle_year_for_time).and_return(2026)
 
-        expect(described_class.year_for_phase(:apply_closing_soon)).to eq(2026)
+        expect(described_class.year_for_phase(:apply_closed)).to eq(2026)
       end
 
       it "does not move when a different phase is selected in the switcher" do
@@ -436,19 +455,15 @@ module Find
       end
     end
 
-    describe ".implied_phases" do
-      it "pins which phases each phase turns on" do
-        result = described_class::PHASES.keys.index_with { |phase| described_class.implied_phases(phase).sort }
+    describe ".phase_in_time?" do
+      it "turns on only the phase the switcher selects" do
+        result = described_class::PHASES.keys.index_with do |selected|
+          allow(described_class).to receive(:current_cycle_schedule).and_return(selected)
 
-        expect(result).to eq(
-          {
-            find_closed: %i[find_closed],
-            apply_open: %i[apply_open],
-            apply_not_open_yet: %i[apply_not_open_yet],
-            apply_closing_soon: %i[apply_open apply_closing_soon].sort,
-            apply_closed: %i[apply_closed],
-          },
-        )
+          described_class::PHASES.keys.select { |phase| described_class.phase_in_time?(phase) }
+        end
+
+        expect(result).to eq(described_class::PHASES.keys.index_with { |phase| [phase] })
       end
     end
   end
