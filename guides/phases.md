@@ -1,0 +1,225 @@
+# Recruitment cycle phases
+
+Find describes where it is in the recruitment cycle with five phases, declared in
+`Find::CycleTimetable::PHASES` (`app/services/find/cycle_timetable.rb`).
+
+Four of them tile the cycle end to end, with no gap and no overlap: `find_closed`,
+`apply_not_open_yet`, `apply_open`, `apply_closed`, and then the next cycle's
+`find_closed`. At any instant exactly one of the four is running. The fifth,
+`apply_closing_soon`, is the deadline banner window and sits inside `apply_open`,
+because it is a banner rather than a separate state.
+
+The cycle switcher on non-production environments sets a single phase, so
+`Find::CycleTimetable.implied_phases` works out which other phases that choice turns
+on by comparing the declared ranges. Containment is derived from the ranges
+themselves, so a phase that is moved or added stays consistent without a second table
+to keep in step. Today only one pair is nested, so `implied_phases` returns the phase
+alone in four cases out of five.
+
+The dates below are placeholders. Every cycle has this shape, and only the exact dates
+move from year to year.
+
+## The six boundaries
+
+There are six moments in a cycle where behaviour changes, and one of them is not a date
+in `CYCLE_DATES`. Worked through with cycle 2026:
+
+```
+A  30 Sep 2025 00:00   find_opens(2026).beginning_of_day   implicit
+B  30 Sep 2025 09:00   find_opens(2026)
+C   7 Oct 2025 09:00   apply_opens(2026)
+D  12 Jul 2026 09:00   first_deadline_banner(2026)
+E  15 Sep 2026 18:00   apply_deadline(2026)
+F  28 Sep 2026 23:59   find_closes(2026)
+```
+
+Five of the six are phase edges. A is not: no phase starts or ends there.
+
+### A. Midnight, nine hours before Find opens
+
+Nothing changes on Find, which is still shut, and no phase begins. But
+`cycle_year_for_time` rolls the cycle year here, not at B, so `current_year` becomes
+2026 and with it:
+
+- which courses load, through `Courses::PublishRules::LiveOnFind`, `Courses::Query` and
+  `Find::PreviousCycleCourse`
+- which years the router accepts, through `CycleYearConstraint`
+- `RecruitmentCycle.current`
+- the targets of `find_reopens` and `apply_reopens`, which are both defined as
+  `next_year` arithmetic
+
+That last one is why the closed-cycle copy moves a year during these nine hours.
+
+`find_closed` spans this boundary rather than starting at it. It runs from F of the
+previous cycle, which is when Find actually shuts, and is indexed by the cycle it leads
+into, because A puts all but a sliver of those nine hours in that cycle.
+
+### B. Find opens
+
+- `find_down?` goes false, so `Find::ApplicationController#redirect_to_cycle_has_ended_if_find_is_down`
+  stops sending every Find page to `/cycle-has-ended`
+- `find_closed` ends and `apply_not_open_yet` begins
+- `can_create_application?` goes true, so the apply button renders in place of the
+  end-of-cycle notice (`app/views/find/courses/show.html.erb`,
+  `app/views/publish/courses/preview.html.erb`, `Find::Courses::ApplyComponent`)
+- `show_apply_opens_soon_banner?` goes true
+- a saved course gains a grey "Not yet open" tag, through `CourseDecorator#saved_status_text_and_colour`
+- `RecruitmentCycle#current_and_open?` goes true, so Publish's cycle title changes from
+  "New cycle" to "Current cycle"
+- Publish's sign in page and course list drop their find-is-down notice
+- `Find::DeadlineBannerComponent` starts rendering at all, since it renders only when
+  Find is up
+
+### C. Apply opens
+
+- `apply_not_open_yet` ends and `apply_open` begins
+- `mid_cycle?` goes true, the stable open stage
+- the apply-opens-soon banner disappears
+- the grey "Not yet open" tag disappears
+
+Nothing else in this codebase. The real change happens in the Apply service, which
+starts accepting submissions. Before this moment a candidate can already create an
+application and work on it, which is why the apply button is shown from B rather than
+from C.
+
+### D. First deadline banner
+
+- `apply_closing_soon` begins, inside `apply_open`, which keeps running
+- `mid_cycle?` goes false, since a banner is now up. Nothing in the app branches on
+  this, and the apply button is unaffected: it reads `can_create_application?`
+- the layout banner switches to the apply-by-deadline variant
+
+Nothing else.
+
+### E. Apply deadline
+
+- `apply_open` and `apply_closing_soon` both end, and `apply_closed` begins
+- `can_create_application?` goes false, so the apply button is replaced by the
+  end-of-cycle notice
+- `apply_deadline_passed` goes true, so a saved course gains a red "Not accepting
+  applications" tag, and `apply_action_column_class` widens the apply row to full width
+  in both `Find::CoursesController` and `Publish::CoursesController`, behind the
+  `candidate_accounts` feature flag
+- the layout banner switches to the closed variant
+- `preview_mode?` goes true, though nothing outside `CycleTimetable` reads it
+
+Find stays open and every course stays browsable.
+
+### F. Find closes
+
+- `find_down?` goes true, so all of Find redirects to `/cycle-has-ended`
+- `apply_closed` ends and the next cycle's `find_closed` begins
+- `current_and_open?` goes false, so Publish's title reverts to "New cycle" and the two
+  Publish views show their notice again
+- `Find::DeadlineBannerComponent` stops rendering
+
+The cycle year does not change here. It changes nine hours later, at A.
+
+## The two windows where Find is open and Apply is shut
+
+B to C and E to F both leave Find open with Apply shut, but that is a coincidence of two
+booleans rather than a shared state. They agree on nothing else.
+
+| | `apply_not_open_yet`, seven days | `apply_closed`, thirteen days |
+| --- | --- | --- |
+| Apply has | not opened yet | shut for good |
+| Candidate can create an application | yes | no |
+| Candidate can submit one | no | no |
+| Courses on display | the cycle just starting | the cycle just ending |
+| Banner | prepare now, submit from `apply_opens` | the deadline has passed |
+| Saved-course tag | grey, "Not yet open" | red, "Not accepting applications" |
+| Apply button | shown | hidden |
+
+One is anticipation and one is termination. They point at different cycles and give
+opposite advice. The names say which is which: not open yet against closed.
+
+## What gates the apply button
+
+`can_create_application?` does, and it is the OR of `apply_not_open_yet` and
+`apply_open`, so it runs from B to E. It reads two phases because no single phase
+answers it:
+
+> can a candidate create an application for the cycle currently on display?
+
+C changes whether Apply will take the finished application, but inside Find it changes
+only what the page says about the wait. When this is false the apply button is replaced
+by the end-of-cycle notice, which tells candidates the courses are closed and gives them
+next cycle's reopening dates, so it must stay true for the whole of B to E including the
+deadline banner window.
+
+`mid_cycle?` is a different question and gates nothing:
+
+> is this the stable open stage, Apply taking applications and no banner up?
+
+It is `apply_open` minus `apply_closing_soon`, so C to D. It exists to name the ordinary
+state, and `mid_cycle`, the instant, sits one day inside it.
+
+## The full cycle
+
+```mermaid
+gantt
+    title Find recruitment cycle phases
+    dateFormat YYYY-MM-DD HH:mm
+    axisFormat %b
+    todayMarker off
+
+    section Tile the cycle end to end
+    find_closed 9h              :done, t1, 2000-09-30 23:59, 2000-10-01 09:00
+    apply_not_open_yet 7d       :crit, t2, 2000-10-01 09:00, 2000-10-08 09:00
+    apply_open 342d             :active, t3, 2000-10-08 09:00, 2001-09-15 18:00
+    apply_closed 13d            :done, t4, 2001-09-15 18:00, 2001-09-28 23:59
+
+    section Sits inside apply_open
+    apply_closing_soon 65d      :crit, i1, 2001-07-12 09:00, 2001-09-15 18:00
+```
+
+## The opening week
+
+`find_closed` lasts nine hours, which is 0.1% of the cycle, so it cannot be seen on the
+chart above. This chart covers the first eight days only.
+
+```mermaid
+gantt
+    title Opening week only
+    dateFormat YYYY-MM-DD HH:mm
+    axisFormat %d %b
+    todayMarker off
+
+    section Tile the cycle end to end
+    find_closed 9h              :done, z1, 2000-09-30 23:59, 2000-10-01 09:00
+    apply_not_open_yet 7d       :crit, z2, 2000-10-01 09:00, 2000-10-08 09:00
+    apply_open continues        :active, z3, 2000-10-08 09:00, 2000-10-09 00:00
+```
+
+## What the placeholder dates stand for
+
+| Date in the charts | Boundary in `CYCLE_DATES` |
+| --- | --- |
+| `2000-09-30 23:59` | `find_closes` of the previous cycle, boundary F of that cycle |
+| `2000-10-01 00:00` | `find_opens` at midnight, boundary A, no phase edge |
+| `2000-10-01 09:00` | `find_opens` |
+| `2000-10-08 09:00` | `apply_opens` |
+| `2001-07-12 09:00` | `first_deadline_banner` |
+| `2001-09-15 18:00` | `apply_deadline` |
+| `2001-09-28 23:59` | `find_closes` |
+
+## Phase extents
+
+| Phase | Runs from | Runs to | Overlap |
+| --- | --- | --- | --- |
+| `find_closed` | `find_closes` of the previous cycle | `find_opens` | none |
+| `apply_not_open_yet` | `find_opens` | `apply_opens` | none |
+| `apply_open` | `apply_opens` | `apply_deadline` | contains `apply_closing_soon` |
+| `apply_closing_soon` | `first_deadline_banner` | `apply_deadline` | inside `apply_open` |
+| `apply_closed` | `apply_deadline` | `find_closes` | none |
+
+`find_closed` is the only row that spans two entries of `CYCLE_DATES`, because Find
+shutting and Find reopening are the seam between two cycles. Every other row reads one
+cycle's dates.
+
+Two names carry the words "mid cycle", and they do not mean the same span:
+
+| Name | Meaning |
+| --- | --- |
+| `mid_cycle(year)` | an instant, `apply_opens` plus two months, the stable open stage, used as the default clock for unpinned specs |
+| `mid_cycle?` | a predicate, `apply_open` minus `apply_closing_soon`, so `apply_opens` to `first_deadline_banner` |
