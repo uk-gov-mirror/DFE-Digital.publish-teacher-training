@@ -122,6 +122,20 @@ RSpec.describe RolloverProgressQuery, type: :model do
         attribute_names: %w[provider_code],
       )
     end
+
+    context "when a provider only ratifies a published course from an earlier cycle" do
+      let(:earlier_cycle) { find_or_create(:recruitment_cycle, year: "2024") }
+      let(:provider_with_earlier_accredited_course) { create(:provider, recruitment_cycle: previous_target_cycle) }
+
+      before do
+        earlier_training_provider = create(:provider, recruitment_cycle: earlier_cycle)
+        create(:course, :published, provider: earlier_training_provider, accredited_provider_code: provider_with_earlier_accredited_course.provider_code)
+      end
+
+      it "does not include the provider" do
+        expect(rollover_progress.eligible_providers).not_to include(provider_with_earlier_accredited_course)
+      end
+    end
   end
 
   describe "#rolled_over_providers" do

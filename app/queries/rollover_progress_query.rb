@@ -155,6 +155,7 @@ private
   def providers_with_rollable_accredited_courses
     @previous_target_cycle.providers
       .joins(accredited_courses: :latest_enrichment)
+      .where(course: { provider_id: @previous_target_cycle.providers.select(:id) })
       .where(course_enrichment: { status: %i[published withdrawn] })
       .distinct
   end
