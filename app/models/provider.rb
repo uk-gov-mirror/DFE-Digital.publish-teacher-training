@@ -94,7 +94,7 @@ class Provider < ApplicationRecord
   end
 
   def rollable_accredited_courses?
-    accredited_courses.includes(:latest_enrichment, :enrichments).any?(&:rollable?)
+    current_accredited_courses.includes(:latest_enrichment, :enrichments).any?(&:rollable?)
   end
 
   def rollable?

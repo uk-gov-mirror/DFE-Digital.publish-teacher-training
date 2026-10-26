@@ -585,6 +585,31 @@ describe Provider do
     end
   end
 
+  describe "#rollable?" do
+    let(:accredited_provider) { create(:provider, :accredited_provider) }
+
+    context "when the provider only accredits a published course in a past cycle" do
+      before do
+        last_years_provider = create(:provider, :previous_recruitment_cycle)
+        create(:course, :published, provider: last_years_provider, accrediting_provider: accredited_provider)
+      end
+
+      it "is not rollable" do
+        expect(accredited_provider).not_to be_rollable
+      end
+    end
+
+    context "when the provider accredits a published course in its own cycle" do
+      before do
+        create(:course, :published, accrediting_provider: accredited_provider)
+      end
+
+      it "is rollable" do
+        expect(accredited_provider).to be_rollable
+      end
+    end
+  end
+
   describe "scopes" do
     describe ".accredited" do
       let!(:accredited_providers) { create_list(:accredited_provider, 2) }
