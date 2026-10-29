@@ -1827,32 +1827,44 @@ describe Course do
   end
 
   describe "rollable?" do
-    subject do
-      create(
-        :course,
-        level: "secondary",
-        name: "Classics",
-        course_code: "AAAA",
-        enrichments: [enrichment],
-      ).rollable?
+    context "when the course is published" do
+      it "is rollable" do
+        expect(create(:course, :published)).to be_rollable
+      end
     end
 
-    context "course is published" do
-      let(:enrichment) { create(:course_enrichment, :published) }
-
-      it { is_expected.to be(true) }
+    context "when the course is withdrawn" do
+      it "is rollable" do
+        expect(create(:course, :withdrawn)).to be_rollable
+      end
     end
 
-    context "course is withdrawn" do
-      let(:enrichment) { create(:course_enrichment, :withdrawn) }
-
-      it { is_expected.to be(true) }
+    context "when the course is a draft that has never been published" do
+      it "is not rollable" do
+        expect(create(:course, :draft_enrichment)).not_to be_rollable
+      end
     end
 
-    context "course is published with a legacy subsequent draft" do
-      let(:enrichment) { create(:course_enrichment, :subsequent_draft) }
+    context "when the course was rolled over and not published since" do
+      it "is not rollable" do
+        course = create(:course, enrichments: [build(:course_enrichment, :rolled_over, course: nil)])
 
-      it { is_expected.to be(true) }
+        expect(course).not_to be_rollable
+      end
+    end
+  end
+
+  describe ".rollable" do
+    let!(:published_course) { create(:course, :published) }
+    let!(:withdrawn_course) { create(:course, :withdrawn) }
+
+    before do
+      create(:course, :draft_enrichment)
+      create(:course, enrichments: [build(:course_enrichment, :rolled_over, course: nil)])
+    end
+
+    it "returns courses that have been published" do
+      expect(described_class.rollable).to contain_exactly(published_course, withdrawn_course)
     end
   end
 

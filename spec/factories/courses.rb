@@ -338,6 +338,7 @@ FactoryBot.define do
     end
 
     trait :withdrawn do
+      first_published_at { 5.days.ago }
       enrichments { [build(:course_enrichment, :withdrawn)] }
     end
 
